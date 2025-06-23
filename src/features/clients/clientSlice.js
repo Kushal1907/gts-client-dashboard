@@ -8,38 +8,47 @@ const API_BASE_URL = "http://localhost:3001"; // Ensure this matches your JSON S
 const simulateDelay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Helper function to calculate date ranges for filtering
-const getDateRange = (rangeType) => {
+const getDateRange = (
+  rangeType,
+  customStartDate = null,
+  customEndDate = null
+) => {
   const today = new Date();
   let startDate = null;
   let endDate = today; // Default end date is today
 
-  switch (rangeType) {
-    case "last_3_months":
-      startDate = new Date(
-        today.getFullYear(),
-        today.getMonth() - 3,
-        today.getDate()
-      );
-      break;
-    case "last_6_months":
-      startDate = new Date(
-        today.getFullYear(),
-        today.getMonth() - 6,
-        today.getDate()
-      );
-      break;
-    case "this_year":
-      startDate = new Date(today.getFullYear(), 0, 1); // January 1st of current year
-      break;
-    case "last_year":
-      startDate = new Date(today.getFullYear() - 1, 0, 1);
-      endDate = new Date(today.getFullYear() - 1, 11, 31); // December 31st of last year
-      break;
-    case "all":
-    default:
-      startDate = null; // No start date filter
-      endDate = null; // No end date filter
-      break;
+  if (rangeType === "custom" && customStartDate && customEndDate) {
+    startDate = new Date(customStartDate);
+    endDate = new Date(customEndDate);
+  } else {
+    switch (rangeType) {
+      case "last_3_months":
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth() - 3,
+          today.getDate()
+        );
+        break;
+      case "last_6_months":
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth() - 6,
+          today.getDate()
+        );
+        break;
+      case "this_year":
+        startDate = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+        break;
+      case "last_year":
+        startDate = new Date(today.getFullYear() - 1, 0, 1);
+        endDate = new Date(today.getFullYear() - 1, 11, 31); // December 31st of last year
+        break;
+      case "all":
+      default:
+        startDate = null; // No start date filter
+        endDate = null; // No end date filter
+        break;
+    }
   }
 
   // Format dates to YYYY-MM-DD for JSON Server
@@ -58,11 +67,19 @@ export const fetchClientData = createAsyncThunk(
     try {
       await simulateDelay(500); // Simulate network latency
 
-      let url = `${API_BASE_URL}/clients?_page=1&_limit=1000`; // Fetch up to 1000 clients for now
+      // Add pagination and sort parameters
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = "id",
+        sortOrder = "asc",
+      } = filters;
 
-      // Apply search term filter
+      let url = `${API_BASE_URL}/clients?_page=${page}&_limit=${limit}&_sort=${sortBy}&_order=${sortOrder}`;
+
+      // Apply search term filter for specific name search
       if (filters.searchTerm) {
-        url += `&q=${encodeURIComponent(filters.searchTerm)}`; // JSON Server full-text search
+        url += `&name_like=${encodeURIComponent(filters.searchTerm)}`;
       }
 
       // Apply industry filter
@@ -77,8 +94,12 @@ export const fetchClientData = createAsyncThunk(
         )}`;
       }
 
-      // Apply date range filter
-      const { startDate, endDate } = getDateRange(filters.dateRange);
+      // Apply date range filter (including custom dates)
+      const { startDate, endDate } = getDateRange(
+        filters.dateRange,
+        filters.customStartDate,
+        filters.customEndDate
+      );
       if (startDate) {
         url += `&signup_date_gte=${startDate}`;
       }
@@ -88,18 +109,22 @@ export const fetchClientData = createAsyncThunk(
 
       const response = await axios.get(url);
       const clients = response.data;
+      // JSON Server sends total count in 'x-total-count' header for pagination
       const totalCount = response.headers["x-total-count"]
         ? parseInt(response.headers["x-total-count"], 10)
         : clients.length;
 
       // --- Data Transformation and Calculations (simulating SQL aggregations) ---
-      // Note: In a real backend, these calculations would happen on the server side
-      // with SQL queries (as outlined in clients.sql) for performance and scalability.
+      // Note: These aggregations are now performed on the *filtered and paginated* data.
+      // For accurate *overall* stats, you'd make a separate call without pagination.
+      // For simplicity in this demo, we'll calculate based on the current page's data.
+      // If you need global stats, you would dispatch another fetch with _limit=totalCount
+      // or set up separate API endpoints for metrics vs. paginated list.
+
       const activeClients = clients.filter((c) => c.is_active).length;
 
       const industryDistribution = clients.reduce((acc, client) => {
         if (client.industry) {
-          // Ensure industry exists
           acc[client.industry] = (acc[client.industry] || 0) + 1;
         }
         return acc;
@@ -107,16 +132,15 @@ export const fetchClientData = createAsyncThunk(
 
       const locationDistribution = clients.reduce((acc, client) => {
         if (client.location) {
-          // Ensure location exists
           acc[client.location] = (acc[client.location] || 0) + 1;
         }
         return acc;
       }, {});
 
-      // Calculate average client tenure
+      // Calculate average client tenure (only for clients on current page)
       const signupDates = clients
         .map((c) => new Date(c.signup_date))
-        .filter((date) => !isNaN(date.getTime())); // Filter out invalid dates
+        .filter((date) => !isNaN(date.getTime()));
       const today = new Date();
       let totalTenureDays = 0;
       if (signupDates.length > 0) {
@@ -129,37 +153,39 @@ export const fetchClientData = createAsyncThunk(
       const avgTenureMonths =
         signupDates.length > 0
           ? totalTenureDays / signupDates.length / 30.44
-          : 0; // Average days in month
+          : 0;
 
-      // Calculate monthly client growth
+      // Calculate monthly client growth (only for clients on current page)
       const monthlyGrowthRaw = clients.reduce((acc, client) => {
         const signupDate = new Date(client.signup_date);
         if (!isNaN(signupDate.getTime())) {
-          // Ensure valid date
-          // Format to YYYY-MM for grouping
-          const yearMonth = `<span class="math-inline">\{signupDate\.getFullYear\(\)\}\-</span>{(signupDate.getMonth() + 1).toString().padStart(2, '0')}`;
+          const yearMonth = `${signupDate.getFullYear()}-${(
+            signupDate.getMonth() + 1
+          )
+            .toString()
+            .padStart(2, "0")}`;
           acc[yearMonth] = (acc[yearMonth] || 0) + 1;
         }
         return acc;
       }, {});
 
-      // Sort monthly growth keys for consistent chart display and ensure continuity
       const monthlyGrowth = Object.keys(monthlyGrowthRaw)
         .sort()
         .map((key) => ({ name: key, value: monthlyGrowthRaw[key] }));
 
       return {
-        clients, // Raw client data (optional, dashboard primarily uses derived stats)
-        totalClients: totalCount,
+        clients,
+        totalClients: totalCount, // This is the total count before pagination
         activeClients,
         clientTenure: avgTenureMonths,
         industryDistribution,
         locationDistribution,
         monthlyGrowth,
+        currentPage: page,
+        itemsPerPage: limit,
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // Provide a more specific error message from the API response if available
         return rejectWithValue(
           error.response?.data?.message || `API Error: ${error.message}`
         );
@@ -173,24 +199,34 @@ export const fetchClientData = createAsyncThunk(
 const clientSlice = createSlice({
   name: "clients",
   initialState: {
-    clients: [], // Raw client data (optional, dashboard primarily uses derived stats)
-    totalClients: 0,
+    clients: [], // Raw client data for the current page
+    totalClients: 0, // Total count of clients matching filters (for pagination)
     activeClients: 0,
     clientTenure: 0,
-    industryDistribution: {}, // Object: { "IT": 5, "Finance": 3 }
-    locationDistribution: {}, // Object: { "New York": 2, "London": 1 }
-    monthlyGrowth: [], // Array: [{ name: "2023-01", value: 5 }, { name: "2023-02", value: 3 }]
+    industryDistribution: {},
+    locationDistribution: {},
+    monthlyGrowth: [],
     loading: false,
     error: null,
+    currentPage: 1,
+    itemsPerPage: 10,
+    sortBy: "id",
+    sortOrder: "asc",
   },
   reducers: {
-    // No synchronous reducers needed for this case
+    setPage: (state, action) => {
+      state.currentPage = action.payload;
+    },
+    setSort: (state, action) => {
+      state.sortBy = action.payload.sortBy;
+      state.sortOrder = action.payload.sortOrder;
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchClientData.pending, (state) => {
         state.loading = true;
-        state.error = null; // Clear previous errors on new fetch
+        state.error = null;
       })
       .addCase(fetchClientData.fulfilled, (state, action) => {
         state.loading = false;
@@ -201,18 +237,27 @@ const clientSlice = createSlice({
         state.industryDistribution = action.payload.industryDistribution;
         state.locationDistribution = action.payload.locationDistribution;
         state.monthlyGrowth = action.payload.monthlyGrowth;
+        state.currentPage = action.payload.currentPage;
+        state.itemsPerPage = action.payload.itemsPerPage;
+        // sortBy and sortOrder are updated by setSort reducer when filters are applied
       })
       .addCase(fetchClientData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to fetch client data";
-        console.error("Failed to fetch client data:", action.payload); // Log for debugging
+        console.error("Failed to fetch client data:", action.payload);
       });
   },
 });
 
-// Selectors for easy access to state data in components
+export const { setPage, setSort, setItemsPerPage } = clientSlice.actions; // Export new actions
+
 export const selectClientData = (state) => state.clients;
 export const selectLoading = (state) => state.clients.loading;
 export const selectError = (state) => state.clients.error;
+export const selectCurrentPage = (state) => state.clients.currentPage;
+export const selectTotalClients = (state) => state.clients.totalClients;
+export const selectItemsPerPage = (state) => state.clients.itemsPerPage;
+export const selectSortBy = (state) => state.clients.sortBy;
+export const selectSortOrder = (state) => state.clients.sortOrder;
 
 export default clientSlice.reducer;

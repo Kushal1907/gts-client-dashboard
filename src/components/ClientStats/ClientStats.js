@@ -5,13 +5,21 @@ import styled from "styled-components";
 import {
   fetchClientData,
   selectClientData,
+  selectCurrentPage,
   selectError,
+  selectItemsPerPage,
   selectLoading,
+  selectSortBy,
+  selectSortOrder,
+  setItemsPerPage,
+  setPage, // <--- Make sure this is present and spelled correctly
+  setSort,
 } from "../../features/clients/clientSlice";
+import ClientList from "../ClientList/ClientList"; // Import the ClientList component
 import ErrorMessage from "../Shared/ErrorMessage";
 import LoadingChart from "../Shared/LoadingChart"; // Skeleton for charts
 import LoadingMetricCard from "../Shared/LoadingMetricCard"; // Skeleton for metric cards
-import ClientChart from "./ClientChart";
+import ClientChart from "./ClientChart"; // This is your generic chart component
 import FilterControls from "./FilterControls";
 import MetricCard from "./MetricCard";
 
@@ -106,23 +114,33 @@ const ClientStats = () => {
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
 
+  // Get pagination and sort state from Redux
+  const currentPage = useSelector(selectCurrentPage);
+  const itemsPerPage = useSelector(selectItemsPerPage);
+  const sortBy = useSelector(selectSortBy);
+  const sortOrder = useSelector(selectSortOrder);
+
+  // Local state for filters
   const [filters, setFilters] = useState({
     searchTerm: "",
     industry: "all",
     subscriptionTier: "all",
     dateRange: "all",
+    customStartDate: null,
+    customEndDate: null,
   });
 
-  // State for chart visibility
+  // Re-added chartVisibility state
   const [chartVisibility, setChartVisibility] = useState({
     industry: true,
     location: true,
     monthlyGrowth: true,
   });
 
-  // Debounce for search term to avoid excessive API calls on every keystroke
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [initialLoad, setInitialLoad] = useState(true); // Flag to prevent initial immediate fetch on mount
+  // State for debounced search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(
+    filters.searchTerm
+  );
 
   // Effect for debouncing search term
   useEffect(() => {
@@ -135,32 +153,81 @@ const ClientStats = () => {
     };
   }, [filters.searchTerm]);
 
-  // Effect to fetch data when relevant filters change (excluding direct searchTerm for debounced effect)
+  // Effect to fetch data when relevant filters, pagination, or sort options change
   useEffect(() => {
-    if (!initialLoad) {
-      dispatch(
-        fetchClientData({
-          ...filters,
-          searchTerm: debouncedSearchTerm, // Use debounced term for API call
-        })
-      );
-    } else {
-      setInitialLoad(false); // After first render, allow fetches
-      dispatch(
-        fetchClientData({ ...filters, searchTerm: debouncedSearchTerm })
-      );
-    }
+    dispatch(
+      fetchClientData({
+        ...filters,
+        searchTerm: debouncedSearchTerm, // Use debounced term for API call
+        page: currentPage, // Pass current page
+        limit: itemsPerPage, // Pass items per page
+        sortBy: sortBy, // Pass sort field
+        sortOrder: sortOrder, // Pass sort order
+      })
+    );
   }, [
     dispatch,
     filters.industry,
     filters.subscriptionTier,
     filters.dateRange,
+    filters.customStartDate,
+    filters.customEndDate,
     debouncedSearchTerm,
+    currentPage,
+    itemsPerPage,
+    sortBy,
+    sortOrder,
   ]);
 
-  const handleFilterChange = useCallback((newFilters) => {
-    setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
-  }, []);
+  const handleFilterChange = useCallback(
+    (newFilters) => {
+      // If filters other than page/sort change, reset to page 1
+      const shouldResetPage =
+        newFilters.page === undefined && // If newFilters doesn't explicitly set page
+        newFilters.sortBy === undefined && // and doesn't explicitly set sort
+        (newFilters.searchTerm !== filters.searchTerm || // and a filter value actually changes
+          newFilters.industry !== filters.industry ||
+          newFilters.subscriptionTier !== filters.subscriptionTier ||
+          newFilters.dateRange !== filters.dateRange ||
+          newFilters.customStartDate !== filters.customStartDate ||
+          newFilters.customEndDate !== filters.customEndDate);
+
+      setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
+
+      if (shouldResetPage) {
+        dispatch(setPage(1)); // Reset to first page
+      }
+      // If newFilters contains 'limit' (from rows per page change in ClientList),
+      // setItemsPerPage will handle resetting page to 1
+      if (newFilters.limit !== undefined) {
+        dispatch(setItemsPerPage(newFilters.limit));
+      }
+    },
+    [filters, dispatch]
+  );
+
+  // Handlers for ClientList pagination and sorting
+  const handlePageChange = useCallback(
+    (newPage) => {
+      dispatch(setPage(newPage));
+    },
+    [dispatch]
+  );
+
+  const handleItemsPerPageChange = useCallback(
+    (newLimit) => {
+      dispatch(setItemsPerPage(newLimit));
+    },
+    [dispatch]
+  );
+
+  const handleSortChange = useCallback(
+    (sortParams) => {
+      dispatch(setSort(sortParams));
+      dispatch(setPage(1)); // Reset to first page when sort changes
+    },
+    [dispatch]
+  );
 
   const toggleChartVisibility = useCallback((chartName) => {
     setChartVisibility((prev) => ({
@@ -192,6 +259,8 @@ const ClientStats = () => {
             <LoadingMetricCard />
             <LoadingMetricCard />
             <LoadingMetricCard />
+            <LoadingMetricCard />{" "}
+            {/* Added fourth for Total Clients from clientSlice */}
           </>
         ) : (
           <>
@@ -206,6 +275,15 @@ const ClientStats = () => {
             <MetricCard
               title="Avg. Client Tenure"
               value={`${clientTenure.toFixed(1)} months`}
+            />
+            {/* You might want a fourth metric here, e.g., 'Overall Growth' from monthlyGrowth data */}
+            <MetricCard
+              title="Overall Growth"
+              value={`+${
+                monthlyGrowth.length > 0
+                  ? monthlyGrowth[monthlyGrowth.length - 1].value
+                  : 0
+              } this period`}
             />
           </>
         )}
@@ -299,6 +377,17 @@ const ClientStats = () => {
           )}
         </div>
       </ChartsContainer>
+
+      {/* Client List with Pagination and Sorting */}
+      <ClientList
+        page={currentPage}
+        setPage={handlePageChange}
+        itemsPerPage={itemsPerPage}
+        setItemsPerPage={handleItemsPerPageChange}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        setSort={handleSortChange}
+      />
     </DashboardContainer>
   );
 };
