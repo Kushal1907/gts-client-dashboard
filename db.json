@@ -1,0 +1,185 @@
+// db.json
+{
+  "clients": [
+    {
+      "id": 1,
+      "name": "Innovate Solutions",
+      "industry": "IT",
+      "location": "New York",
+      "subscription_tier": "Premium",
+      "signup_date": "2023-01-15",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "Global Finance Group",
+      "industry": "Finance",
+      "location": "London",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2022-03-20",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "name": "HealthBridge Clinic",
+      "industry": "Healthcare",
+      "location": "Los Angeles",
+      "subscription_tier": "Basic",
+      "signup_date": "2024-02-10",
+      "is_active": false
+    },
+    {
+      "id": 4,
+      "name": "Learnify Education",
+      "industry": "Education",
+      "location": "Chicago",
+      "subscription_tier": "Free",
+      "signup_date": "2023-07-01",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "name": "Pro Manufacturing Co.",
+      "industry": "Manufacturing",
+      "location": "Houston",
+      "subscription_tier": "Premium",
+      "signup_date": "2024-01-01",
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "name": "CyberSecure Tech",
+      "industry": "IT",
+      "location": "San Francisco",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2022-11-25",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "name": "Wealth Management Inc.",
+      "industry": "Finance",
+      "location": "Tokyo",
+      "subscription_tier": "Premium",
+      "signup_date": "2023-09-10",
+      "is_active": false
+    },
+    {
+      "id": 8,
+      "name": "Vitality Health Systems",
+      "industry": "Healthcare",
+      "location": "Sydney",
+      "subscription_tier": "Basic",
+      "signup_date": "2024-03-05",
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "name": "Academic Insights",
+      "industry": "Education",
+      "location": "Berlin",
+      "subscription_tier": "Free",
+      "signup_date": "2023-04-18",
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "name": "Industrial Automation",
+      "industry": "Manufacturing",
+      "location": "Paris",
+      "subscription_tier": "Premium",
+      "signup_date": "2024-05-20",
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "name": "Cloud Solutions",
+      "industry": "IT",
+      "location": "Seattle",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2023-02-01",
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "name": "Global Investors",
+      "industry": "Finance",
+      "location": "Singapore",
+      "subscription_tier": "Premium",
+      "signup_date": "2022-09-01",
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "name": "Community Health",
+      "industry": "Healthcare",
+      "location": "Mumbai",
+      "subscription_tier": "Basic",
+      "signup_date": "2023-11-01",
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "name": "Digital Learnings",
+      "industry": "Education",
+      "location": "Toronto",
+      "subscription_tier": "Free",
+      "signup_date": "2024-01-20",
+      "is_active": false
+    },
+    {
+      "id": 15,
+      "name": "Advanced Robotics",
+      "industry": "Manufacturing",
+      "location": "Shanghai",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2023-03-10",
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "name": "Data Analytics Corp",
+      "industry": "IT",
+      "location": "Bengaluru",
+      "subscription_tier": "Premium",
+      "signup_date": "2023-05-05",
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "name": "Market Movers",
+      "industry": "Finance",
+      "location": "Frankfurt",
+      "subscription_tier": "Basic",
+      "signup_date": "2024-04-01",
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "name": "Wellbeing Solutions",
+      "industry": "Healthcare",
+      "location": "Dublin",
+      "subscription_tier": "Premium",
+      "signup_date": "2022-07-25",
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "name": "SkillSphere",
+      "industry": "Education",
+      "location": "Mexico City",
+      "subscription_tier": "Free",
+      "signup_date": "2023-08-15",
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "name": "Green Energy Inc.",
+      "industry": "Manufacturing",
+      "location": "Vancouver",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2024-06-01",
+      "is_active": true
+    }
+  ]
+}
