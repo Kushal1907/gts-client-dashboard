@@ -1,23 +1,19 @@
 -- clients.sql
 
 -- SQL Schema for the clients table
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'clients' AND type = 'U')
-BEGIN
-    CREATE TABLE clients (
-        id INT IDENTITY(1,1) PRIMARY KEY, -- For auto-incrementing ID in SQL Server
-        name VARCHAR(100) NOT NULL,
-        industry VARCHAR(50),
-        location VARCHAR(50),
-        subscription_tier VARCHAR(20),
-        signup_date DATE NOT NULL,
-        is_active BIT DEFAULT 1,         -- BIT for boolean in SQL Server
-        created_at DATETIME DEFAULT GETDATE(), -- DATETIME for timestamp
-        updated_at DATETIME DEFAULT GETDATE()
-    );
-END;
+CREATE TABLE IF NOT EXISTS clients (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    industry VARCHAR(50),
+    location VARCHAR(50),
+    subscription_tier VARCHAR(20),
+    signup_date DATE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Sample data insertion (for local database testing)
--- You can uncomment and run these if you are setting up a real database like PostgreSQL
 -- INSERT INTO clients (name, industry, location, subscription_tier, signup_date, is_active) VALUES
 -- ('Tech Solutions Inc.', 'IT', 'New York', 'Premium', '2023-01-15', TRUE),
 -- ('Global Finance Group', 'Finance', 'London', 'Enterprise', '2022-03-20', TRUE),
@@ -87,7 +83,8 @@ SELECT
 FROM
     clients;
 
--- 7. Clients filtered by Industry and Subscription Tier (Example of combining filters)
+-- 7. Clients filtered by Industry, Subscription Tier, Name Search, and Date Range
+-- Example for a specific industry, premium tier, name search, and date range:
 SELECT
     id,
     name,
@@ -99,7 +96,10 @@ SELECT
 FROM
     clients
 WHERE
-    industry = 'IT' AND subscription_tier = 'Premium';
+    industry = 'IT'
+    AND subscription_tier = 'Premium'
+    AND name ILIKE '%Innovate%' -- Case-insensitive search for 'Innovate' in name
+    AND signup_date BETWEEN '2023-01-01' AND '2023-12-31'; -- Clients signed up in 2023
 
 -- 8. Count of active/inactive clients
 SELECT

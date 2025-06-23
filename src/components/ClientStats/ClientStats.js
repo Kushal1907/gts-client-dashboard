@@ -1,5 +1,5 @@
 // src/components/ClientStats/ClientStats.js
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import styled from "styled-components";
 import {
@@ -9,7 +9,8 @@ import {
   selectLoading,
 } from "../../features/clients/clientSlice";
 import ErrorMessage from "../Shared/ErrorMessage";
-import LoadingSpinner from "../Shared/LoadingSpinner";
+import LoadingChart from "../Shared/LoadingChart"; // Skeleton for charts
+import LoadingMetricCard from "../Shared/LoadingMetricCard"; // Skeleton for metric cards
 import ClientChart from "./ClientChart";
 import FilterControls from "./FilterControls";
 import MetricCard from "./MetricCard";
@@ -18,11 +19,12 @@ const DashboardContainer = styled.div`
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  font-family: "Arial", sans-serif; /* Use a default font or GTS's specified font */
+  font-family: "Arial", sans-serif;
   color: #333;
-  background-color: #f5f7fa; /* Light background for the dashboard */
+  background-color: #f5f7fa;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  min-height: 80vh; /* Ensure some height for loading states */
 
   @media (max-width: 768px) {
     padding: 15px;
@@ -45,7 +47,7 @@ const MetricsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
   margin-bottom: 40px;
-  justify-content: center; /* Center cards if there are not enough to fill a row */
+  justify-content: center;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -57,11 +59,37 @@ const ChartsContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 25px;
-  margin-bottom: 30px; /* Spacing below charts */
+  margin-bottom: 30px;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 15px;
+  }
+`;
+
+const ChartHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px; /* Adjust spacing as needed */
+  h3 {
+    margin: 0;
+    padding-right: 10px; /* Space between title and button */
+  }
+`;
+
+const ToggleButton = styled.button`
+  background-color: ${(props) => (props.active ? "#007bff" : "#ccc")};
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: ${(props) => (props.active ? "#0056b3" : "#999")};
   }
 `;
 
@@ -78,29 +106,68 @@ const ClientStats = () => {
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
 
-  // Initial filter states
   const [filters, setFilters] = useState({
-    dateRange: "all", // Not implemented yet, but placeholder
+    searchTerm: "",
     industry: "all",
     subscriptionTier: "all",
+    dateRange: "all",
   });
 
-  // Fetch data whenever filters change
+  // State for chart visibility
+  const [chartVisibility, setChartVisibility] = useState({
+    industry: true,
+    location: true,
+    monthlyGrowth: true,
+  });
+
+  // Debounce for search term to avoid excessive API calls on every keystroke
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [initialLoad, setInitialLoad] = useState(true); // Flag to prevent initial immediate fetch on mount
+
+  // Effect for debouncing search term
   useEffect(() => {
-    dispatch(fetchClientData(filters));
-  }, [dispatch, filters]);
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(filters.searchTerm);
+    }, 500); // 500ms debounce delay
 
-  const handleFilterChange = (newFilters) => {
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [filters.searchTerm]);
+
+  // Effect to fetch data when relevant filters change (excluding direct searchTerm for debounced effect)
+  useEffect(() => {
+    if (!initialLoad) {
+      dispatch(
+        fetchClientData({
+          ...filters,
+          searchTerm: debouncedSearchTerm, // Use debounced term for API call
+        })
+      );
+    } else {
+      setInitialLoad(false); // After first render, allow fetches
+      dispatch(
+        fetchClientData({ ...filters, searchTerm: debouncedSearchTerm })
+      );
+    }
+  }, [
+    dispatch,
+    filters.industry,
+    filters.subscriptionTier,
+    filters.dateRange,
+    debouncedSearchTerm,
+  ]);
+
+  const handleFilterChange = useCallback((newFilters) => {
     setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
-  };
+  }, []);
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return <ErrorMessage message={error} />;
-  }
+  const toggleChartVisibility = useCallback((chartName) => {
+    setChartVisibility((prev) => ({
+      ...prev,
+      [chartName]: !prev[chartName],
+    }));
+  }, []);
 
   // Convert distribution objects to array format for Recharts Pie/Bar charts
   const industryChartData = Object.entries(industryDistribution).map(
@@ -117,43 +184,120 @@ const ClientStats = () => {
 
       <FilterControls filters={filters} onFilterChange={handleFilterChange} />
 
+      {error && <ErrorMessage message={error} />}
+
       <MetricsGrid>
-        <MetricCard
-          title="Total Clients"
-          value={totalClients.toLocaleString()}
-        />
-        <MetricCard
-          title="Active Clients"
-          value={activeClients.toLocaleString()}
-        />
-        <MetricCard
-          title="Avg. Client Tenure"
-          value={`${clientTenure.toFixed(1)} months`}
-        />
+        {loading ? (
+          <>
+            <LoadingMetricCard />
+            <LoadingMetricCard />
+            <LoadingMetricCard />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              title="Total Clients"
+              value={totalClients.toLocaleString()}
+            />
+            <MetricCard
+              title="Active Clients"
+              value={activeClients.toLocaleString()}
+            />
+            <MetricCard
+              title="Avg. Client Tenure"
+              value={`${clientTenure.toFixed(1)} months`}
+            />
+          </>
+        )}
       </MetricsGrid>
 
       <ChartsContainer>
-        <ClientChart
-          title="Clients by Industry"
-          data={industryChartData}
-          type="Pie"
-          dataKey="value"
-          nameKey="name"
-        />
-        <ClientChart
-          title="Clients by Location"
-          data={locationChartData}
-          type="Bar"
-          dataKey="value"
-          nameKey="name"
-        />
-        <ClientChart
-          title="Monthly Client Growth"
-          data={monthlyGrowth}
-          type="Line"
-          dataKey="value"
-          nameKey="name"
-        />
+        <div>
+          <ChartHeader>
+            <h3>Clients by Industry</h3>
+            <ToggleButton
+              active={chartVisibility.industry}
+              onClick={() => toggleChartVisibility("industry")}
+              aria-label={
+                chartVisibility.industry
+                  ? "Hide Clients by Industry chart"
+                  : "Show Clients by Industry chart"
+              }>
+              {chartVisibility.industry ? "Hide" : "Show"}
+            </ToggleButton>
+          </ChartHeader>
+          {loading ? (
+            <LoadingChart />
+          ) : (
+            chartVisibility.industry && (
+              <ClientChart
+                title="Clients by Industry"
+                data={industryChartData}
+                type="Pie"
+                dataKey="value"
+                nameKey="name"
+              />
+            )
+          )}
+        </div>
+
+        <div>
+          <ChartHeader>
+            <h3>Clients by Location</h3>
+            <ToggleButton
+              active={chartVisibility.location}
+              onClick={() => toggleChartVisibility("location")}
+              aria-label={
+                chartVisibility.location
+                  ? "Hide Clients by Location chart"
+                  : "Show Clients by Location chart"
+              }>
+              {chartVisibility.location ? "Hide" : "Show"}
+            </ToggleButton>
+          </ChartHeader>
+          {loading ? (
+            <LoadingChart />
+          ) : (
+            chartVisibility.location && (
+              <ClientChart
+                title="Clients by Location"
+                data={locationChartData}
+                type="Bar"
+                dataKey="value"
+                nameKey="name"
+              />
+            )
+          )}
+        </div>
+
+        <div>
+          <ChartHeader>
+            <h3>Monthly Client Growth</h3>
+            <ToggleButton
+              active={chartVisibility.monthlyGrowth}
+              onClick={() => toggleChartVisibility("monthlyGrowth")}
+              aria-label={
+                chartVisibility.monthlyGrowth
+                  ? "Hide Monthly Client Growth chart"
+                  : "Show Monthly Client Growth chart"
+              }>
+              {chartVisibility.monthlyGrowth ? "Hide" : "Show"}
+            </ToggleButton>
+          </ChartHeader>
+          {loading ? (
+            <LoadingChart />
+          ) : (
+            chartVisibility.monthlyGrowth && (
+              <ClientChart
+                title="Monthly Client Growth"
+                data={monthlyGrowth}
+                type="Line"
+                dataKey="value"
+                nameKey="name"
+              />
+            )
+          )}
+        </div>
       </ChartsContainer>
     </DashboardContainer>
   );

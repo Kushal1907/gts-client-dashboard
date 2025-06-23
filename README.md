@@ -1,46 +1,36 @@
-# Getting Started with Create React App and Redux
+# GTS Client Statistics Dashboard Component
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), using the [Redux](https://redux.js.org/) and [Redux Toolkit](https://redux-toolkit.js.org/) template.
+This project implements a dynamic Client Statistics Dashboard component for the GTS Service Platform. It showcases real-time statistics about employers/clients, including total clients, active clients, location/industry distribution, and monthly growth. It aims to boost credibility, aid benchmarking, and provide actionable insights.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Key Metrics Cards:** Displays Total Clients, Active Clients, and Average Client Tenure.
+- **Interactive Charts:** Visualizes data using Bar, Pie, and Line charts (powered by Recharts) for location distribution, industry breakdown, and monthly client growth.
+- **Enhanced Data Filtering:**
+  - **Industry & Subscription Tier:** Dropdowns to filter clients.
+  - **Client Search:** An input field to search clients by name.
+  - **Date Range Filter:** Filter clients based on their signup date (e.g., "Last 3 Months", "This Year").
+- **Improved User Experience:**
+  - **Loading Skeletons:** Provides a smoother visual experience while data is being fetched.
+  - **Error Boundary:** Gracefully handles unexpected JavaScript errors within the component tree, preventing a full application crash.
+  - **Chart Toggling:** Allows users to hide or show individual charts based on their preference.
+- **Responsive UI:** Designed with modern CSS (Flexbox & Grid via Styled Components) for optimal viewing on various devices.
+- **API Integration:** Fetches data from a mock backend, demonstrating handling of loading and error states.
+- **State Management:** Utilizes Redux Toolkit for efficient and scalable global state management.
+- **Mock Backend:** Includes a `db.json` file and instructions to run a JSON Server to simulate the API.
 
-### `npm start`
+## Technologies Used
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend:**
+  - ReactJS
+  - Redux Toolkit (for state management)
+  - Recharts (for charting)
+  - Axios (for API calls)
+  - Styled Components (for CSS-in-JS styling)
+- **Mock Backend:**
+  - JSON Server
+- **Database (Conceptual):**
+  - PostgreSQL/MySQL (SQL queries provided in `clients.sql`)
+- **Version Control:** Git
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Project Structure

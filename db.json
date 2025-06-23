@@ -179,6 +179,96 @@
       "subscription_tier": "Enterprise",
       "signup_date": "2024-06-01",
       "is_active": true
+    },
+    {
+      "id": 21,
+      "name": "Quantum AI",
+      "industry": "IT",
+      "location": "Austin",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2024-03-22",
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "name": "Eco Solutions",
+      "industry": "Manufacturing",
+      "location": "Copenhagen",
+      "subscription_tier": "Basic",
+      "signup_date": "2024-01-05",
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "name": "Future Trends",
+      "industry": "Finance",
+      "location": "Zurich",
+      "subscription_tier": "Premium",
+      "signup_date": "2023-10-10",
+      "is_active": true
+    },
+    {
+      "id": 24,
+      "name": "NutriLife Clinic",
+      "industry": "Healthcare",
+      "location": "Rio de Janeiro",
+      "subscription_tier": "Free",
+      "signup_date": "2024-05-12",
+      "is_active": true
+    },
+    {
+      "id": 25,
+      "name": "Creative Minds",
+      "industry": "Education",
+      "location": "Melbourne",
+      "subscription_tier": "Basic",
+      "signup_date": "2023-06-25",
+      "is_active": false
+    },
+    {
+      "id": 26,
+      "name": "RoboFactory",
+      "industry": "Manufacturing",
+      "location": "Seoul",
+      "subscription_tier": "Enterprise",
+      "signup_date": "2024-04-15",
+      "is_active": true
+    },
+    {
+      "id": 27,
+      "name": "Agile Development",
+      "industry": "IT",
+      "location": "Dublin",
+      "subscription_tier": "Premium",
+      "signup_date": "2023-03-01",
+      "is_active": true
+    },
+    {
+      "id": 28,
+      "name": "InvestWise",
+      "industry": "Finance",
+      "location": "Dubai",
+      "subscription_tier": "Basic",
+      "signup_date": "2024-01-25",
+      "is_active": true
+    },
+    {
+      "id": 29,
+      "name": "Urban Health",
+      "industry": "Healthcare",
+      "location": "Warsaw",
+      "subscription_tier": "Premium",
+      "signup_date": "2022-08-08",
+      "is_active": true
+    },
+    {
+      "id": 30,
+      "name": "Coding Dojo",
+      "industry": "Education",
+      "location": "Lisbon",
+      "subscription_tier": "Free",
+      "signup_date": "2024-02-29",
+      "is_active": true
     }
   ]
 }
