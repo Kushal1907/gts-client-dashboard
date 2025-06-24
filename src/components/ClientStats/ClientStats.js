@@ -1,28 +1,37 @@
 // src/components/ClientStats/ClientStats.js
+// Force rebuild 20250623-3 (updated - full code with transient props for ToggleButton)
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import styled from "styled-components";
+import io from "socket.io-client";
+import styled from "styled-components"; // No change here
+
 import {
+  fetchActiveInactiveCounts,
   fetchClientData,
+  selectActiveClientCount,
   selectClientData,
   selectCurrentPage,
   selectError,
+  selectInactiveClientCount,
   selectItemsPerPage,
   selectLoading,
   selectSortBy,
   selectSortOrder,
   setItemsPerPage,
-  setPage, // <--- Make sure this is present and spelled correctly
+  setPage,
   setSort,
 } from "../../features/clients/clientSlice";
-import ClientList from "../ClientList/ClientList"; // Import the ClientList component
+import ClientList from "../ClientList/ClientList";
 import ErrorMessage from "../Shared/ErrorMessage";
-import LoadingChart from "../Shared/LoadingChart"; // Skeleton for charts
-import LoadingMetricCard from "../Shared/LoadingMetricCard"; // Skeleton for metric cards
-import ClientChart from "./ClientChart"; // This is your generic chart component
+import LoadingChart from "../Shared/LoadingChart";
+import LoadingMetricCard from "../Shared/LoadingMetricCard";
+import ClientChart from "./ClientChart";
 import FilterControls from "./FilterControls";
 import MetricCard from "./MetricCard";
 
+// -------------------------------------------------------------------------
+// Styled Components
+// -------------------------------------------------------------------------
 const DashboardContainer = styled.div`
   padding: 20px;
   max-width: 1200px;
@@ -32,7 +41,7 @@ const DashboardContainer = styled.div`
   background-color: #f5f7fa;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  min-height: 80vh; /* Ensure some height for loading states */
+  min-height: 80vh;
 
   @media (max-width: 768px) {
     padding: 15px;
@@ -79,15 +88,16 @@ const ChartHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px; /* Adjust spacing as needed */
+  margin-bottom: 10px;
   h3 {
     margin: 0;
-    padding-right: 10px; /* Space between title and button */
+    padding-right: 10px;
   }
 `;
 
+// --- CRITICAL CHANGE 1: Update ToggleButton definition to use $active ---
 const ToggleButton = styled.button`
-  background-color: ${(props) => (props.active ? "#007bff" : "#ccc")};
+  background-color: ${(props) => (props.$active ? "#007bff" : "#ccc")};
   color: white;
   border: none;
   border-radius: 5px;
@@ -97,30 +107,34 @@ const ToggleButton = styled.button`
   transition: background-color 0.2s ease;
 
   &:hover {
-    background-color: ${(props) => (props.active ? "#0056b3" : "#999")};
+    background-color: ${(props) => (props.$active ? "#0056b3" : "#999")};
   }
 `;
+// -------------------------------------------------------------------------
+// END Styled Components
+// -------------------------------------------------------------------------
 
 const ClientStats = () => {
   const dispatch = useDispatch();
   const {
     totalClients,
-    activeClients,
     clientTenure,
     industryDistribution,
     locationDistribution,
     monthlyGrowth,
   } = useSelector(selectClientData);
+
+  const activeClientCount = useSelector(selectActiveClientCount);
+  const inactiveClientCount = useSelector(selectInactiveClientCount);
+
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
 
-  // Get pagination and sort state from Redux
   const currentPage = useSelector(selectCurrentPage);
   const itemsPerPage = useSelector(selectItemsPerPage);
   const sortBy = useSelector(selectSortBy);
   const sortOrder = useSelector(selectSortOrder);
 
-  // Local state for filters
   const [filters, setFilters] = useState({
     searchTerm: "",
     industry: "all",
@@ -130,14 +144,12 @@ const ClientStats = () => {
     customEndDate: null,
   });
 
-  // Re-added chartVisibility state
   const [chartVisibility, setChartVisibility] = useState({
     industry: true,
     location: true,
     monthlyGrowth: true,
   });
 
-  // State for debounced search term
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(
     filters.searchTerm
   );
@@ -146,25 +158,26 @@ const ClientStats = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(filters.searchTerm);
-    }, 500); // 500ms debounce delay
+    }, 500);
 
     return () => {
       clearTimeout(handler);
     };
   }, [filters.searchTerm]);
 
-  // Effect to fetch data when relevant filters, pagination, or sort options change
-  useEffect(() => {
+  // Define a memoized function to fetch all dashboard data
+  const fetchAllDashboardData = useCallback(() => {
     dispatch(
       fetchClientData({
         ...filters,
-        searchTerm: debouncedSearchTerm, // Use debounced term for API call
-        page: currentPage, // Pass current page
-        limit: itemsPerPage, // Pass items per page
-        sortBy: sortBy, // Pass sort field
-        sortOrder: sortOrder, // Pass sort order
+        searchTerm: debouncedSearchTerm,
+        page: currentPage,
+        limit: itemsPerPage,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
       })
     );
+    dispatch(fetchActiveInactiveCounts());
   }, [
     dispatch,
     filters.industry,
@@ -179,13 +192,46 @@ const ClientStats = () => {
     sortOrder,
   ]);
 
+  // Effect for initial data fetch and handling filter/pagination/sort changes
+  useEffect(() => {
+    fetchAllDashboardData();
+  }, [fetchAllDashboardData]);
+
+  // WebSocket connection and event listener for real-time updates
+  useEffect(() => {
+    const socket = io("http://localhost:3001");
+
+    socket.on("connect", () => {
+      console.log("Connected to WebSocket server");
+    });
+
+    socket.on("dataUpdated", () => {
+      console.log(
+        "Received dataUpdated event from server. Refetching dashboard data..."
+      );
+      fetchAllDashboardData();
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Disconnected from WebSocket server");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("WebSocket connection error:", err);
+    });
+
+    return () => {
+      socket.disconnect();
+      console.log("Disconnected from WebSocket server on component unmount");
+    };
+  }, [fetchAllDashboardData]);
+
   const handleFilterChange = useCallback(
     (newFilters) => {
-      // If filters other than page/sort change, reset to page 1
       const shouldResetPage =
-        newFilters.page === undefined && // If newFilters doesn't explicitly set page
-        newFilters.sortBy === undefined && // and doesn't explicitly set sort
-        (newFilters.searchTerm !== filters.searchTerm || // and a filter value actually changes
+        newFilters.page === undefined &&
+        newFilters.sortBy === undefined &&
+        (newFilters.searchTerm !== filters.searchTerm ||
           newFilters.industry !== filters.industry ||
           newFilters.subscriptionTier !== filters.subscriptionTier ||
           newFilters.dateRange !== filters.dateRange ||
@@ -195,18 +241,15 @@ const ClientStats = () => {
       setFilters((prevFilters) => ({ ...prevFilters, ...newFilters }));
 
       if (shouldResetPage) {
-        dispatch(setPage(1)); // Reset to first page
+        dispatch(setPage(1));
       }
-      // If newFilters contains 'limit' (from rows per page change in ClientList),
-      // setItemsPerPage will handle resetting page to 1
       if (newFilters.limit !== undefined) {
-        dispatch(setItemsPerPage(newFilters.limit));
+        dispatch(setItemsPerPage(newFilters.imit));
       }
     },
     [filters, dispatch]
   );
 
-  // Handlers for ClientList pagination and sorting
   const handlePageChange = useCallback(
     (newPage) => {
       dispatch(setPage(newPage));
@@ -224,7 +267,7 @@ const ClientStats = () => {
   const handleSortChange = useCallback(
     (sortParams) => {
       dispatch(setSort(sortParams));
-      dispatch(setPage(1)); // Reset to first page when sort changes
+      dispatch(setPage(1));
     },
     [dispatch]
   );
@@ -236,14 +279,12 @@ const ClientStats = () => {
     }));
   }, []);
 
-  // Convert distribution objects to array format for Recharts Pie/Bar charts
   const industryChartData = Object.entries(industryDistribution).map(
     ([name, value]) => ({ name, value })
   );
   const locationChartData = Object.entries(locationDistribution).map(
     ([name, value]) => ({ name, value })
   );
-  // monthlyGrowth is already formatted as [{ name, value }] in clientSlice
 
   return (
     <DashboardContainer>
@@ -259,8 +300,7 @@ const ClientStats = () => {
             <LoadingMetricCard />
             <LoadingMetricCard />
             <LoadingMetricCard />
-            <LoadingMetricCard />{" "}
-            {/* Added fourth for Total Clients from clientSlice */}
+            <LoadingMetricCard />
           </>
         ) : (
           <>
@@ -270,13 +310,12 @@ const ClientStats = () => {
             />
             <MetricCard
               title="Active Clients"
-              value={activeClients.toLocaleString()}
+              value={activeClientCount.toLocaleString()}
             />
             <MetricCard
               title="Avg. Client Tenure"
               value={`${clientTenure.toFixed(1)} months`}
             />
-            {/* You might want a fourth metric here, e.g., 'Overall Growth' from monthlyGrowth data */}
             <MetricCard
               title="Overall Growth"
               value={`+${
@@ -293,8 +332,9 @@ const ClientStats = () => {
         <div>
           <ChartHeader>
             <h3>Clients by Industry</h3>
+            {/* --- CRITICAL CHANGE 2: Update ToggleButton usage to use $active --- */}
             <ToggleButton
-              active={chartVisibility.industry}
+              $active={chartVisibility.industry}
               onClick={() => toggleChartVisibility("industry")}
               aria-label={
                 chartVisibility.industry
@@ -322,8 +362,9 @@ const ClientStats = () => {
         <div>
           <ChartHeader>
             <h3>Clients by Location</h3>
+            {/* --- CRITICAL CHANGE 3: Update ToggleButton usage to use $active --- */}
             <ToggleButton
-              active={chartVisibility.location}
+              $active={chartVisibility.location}
               onClick={() => toggleChartVisibility("location")}
               aria-label={
                 chartVisibility.location
@@ -351,8 +392,9 @@ const ClientStats = () => {
         <div>
           <ChartHeader>
             <h3>Monthly Client Growth</h3>
+            {/* --- CRITICAL CHANGE 4: Update ToggleButton usage to use $active --- */}
             <ToggleButton
-              active={chartVisibility.monthlyGrowth}
+              $active={chartVisibility.monthlyGrowth}
               onClick={() => toggleChartVisibility("monthlyGrowth")}
               aria-label={
                 chartVisibility.monthlyGrowth
@@ -378,7 +420,6 @@ const ClientStats = () => {
         </div>
       </ChartsContainer>
 
-      {/* Client List with Pagination and Sorting */}
       <ClientList
         page={currentPage}
         setPage={handlePageChange}

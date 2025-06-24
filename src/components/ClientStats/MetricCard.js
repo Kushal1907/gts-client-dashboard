@@ -15,6 +15,13 @@ const Card = styled.div`
   transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
   animation: ${fadeIn} 0.5s ease-out forwards; /* Apply animation */
   min-width: 250px; /* Ensure minimum width */
+
+  /* NEW: Hover Effect */
+  &:hover {
+    transform: translateY(-5px); /* Lifts the card up slightly */
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15); /* Larger, more pronounced shadow */
+    cursor: pointer; /* Indicates it's interactive, even if not clickable */
+  }
 `;
 
 const Title = styled.h3`

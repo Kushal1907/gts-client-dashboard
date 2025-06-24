@@ -1,13 +1,18 @@
 // src/features/clients/clientSlice.js
+// Force rebuild 20250623-1 (updated)
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
+import axiosRetry from "axios-retry";
 
-const API_BASE_URL = "http://localhost:3001"; // Ensure this matches your JSON Server port
+const API_BASE_URL = "http://localhost:3001";
 
-// Helper function to simulate delay for better UX (loading states)
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+});
+
 const simulateDelay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Helper function to calculate date ranges for filtering
 const getDateRange = (
   rangeType,
   customStartDate = null,
@@ -15,7 +20,7 @@ const getDateRange = (
 ) => {
   const today = new Date();
   let startDate = null;
-  let endDate = today; // Default end date is today
+  let endDate = today;
 
   if (rangeType === "custom" && customStartDate && customEndDate) {
     startDate = new Date(customStartDate);
@@ -37,21 +42,20 @@ const getDateRange = (
         );
         break;
       case "this_year":
-        startDate = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+        startDate = new Date(today.getFullYear(), 0, 1);
         break;
       case "last_year":
         startDate = new Date(today.getFullYear() - 1, 0, 1);
-        endDate = new Date(today.getFullYear() - 1, 11, 31); // December 31st of last year
+        endDate = new Date(today.getFullYear() - 1, 11, 31);
         break;
       case "all":
       default:
-        startDate = null; // No start date filter
-        endDate = null; // No end date filter
+        startDate = null;
+        endDate = null;
         break;
     }
   }
 
-  // Format dates to YYYY-MM-DD for JSON Server
   const format = (date) => (date ? date.toISOString().split("T")[0] : null);
 
   return {
@@ -60,14 +64,39 @@ const getDateRange = (
   };
 };
 
-// Async Thunk to fetch client data
+// UPDATED ASYNC THUNK: Fetch Active and Inactive Client Counts from custom endpoint
+export const fetchActiveInactiveCounts = createAsyncThunk(
+  "clients/fetchActiveInactiveCounts",
+  async (_, { rejectWithValue }) => {
+    try {
+      await simulateDelay(300);
+
+      // Call the custom endpoint
+      const response = await axios.get(`${API_BASE_URL}/clients/active`);
+      const { activeClients, inactiveClients } = response.data; // Destructure directly
+
+      return { active: activeClients, inactive: inactiveClients };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          error.response?.data?.message ||
+            `API Error fetching counts: ${error.message}`
+        );
+      }
+      return rejectWithValue(
+        "An unknown error occurred while fetching active/inactive counts."
+      );
+    }
+  }
+);
+
+// Async Thunk to fetch main client data (remains mostly same, but ensures totalClients is accurate for pagination)
 export const fetchClientData = createAsyncThunk(
   "clients/fetchClientData",
   async (filters = {}, { rejectWithValue }) => {
     try {
-      await simulateDelay(500); // Simulate network latency
+      await simulateDelay(500);
 
-      // Add pagination and sort parameters
       const {
         page = 1,
         limit = 10,
@@ -77,24 +106,18 @@ export const fetchClientData = createAsyncThunk(
 
       let url = `${API_BASE_URL}/clients?_page=${page}&_limit=${limit}&_sort=${sortBy}&_order=${sortOrder}`;
 
-      // Apply search term filter for specific name search
       if (filters.searchTerm) {
         url += `&name_like=${encodeURIComponent(filters.searchTerm)}`;
       }
-
-      // Apply industry filter
       if (filters.industry && filters.industry !== "all") {
         url += `&industry=${encodeURIComponent(filters.industry)}`;
       }
-
-      // Apply subscription tier filter
       if (filters.subscriptionTier && filters.subscriptionTier !== "all") {
         url += `&subscription_tier=${encodeURIComponent(
           filters.subscriptionTier
         )}`;
       }
 
-      // Apply date range filter (including custom dates)
       const { startDate, endDate } = getDateRange(
         filters.dateRange,
         filters.customStartDate,
@@ -109,19 +132,9 @@ export const fetchClientData = createAsyncThunk(
 
       const response = await axios.get(url);
       const clients = response.data;
-      // JSON Server sends total count in 'x-total-count' header for pagination
       const totalCount = response.headers["x-total-count"]
         ? parseInt(response.headers["x-total-count"], 10)
         : clients.length;
-
-      // --- Data Transformation and Calculations (simulating SQL aggregations) ---
-      // Note: These aggregations are now performed on the *filtered and paginated* data.
-      // For accurate *overall* stats, you'd make a separate call without pagination.
-      // For simplicity in this demo, we'll calculate based on the current page's data.
-      // If you need global stats, you would dispatch another fetch with _limit=totalCount
-      // or set up separate API endpoints for metrics vs. paginated list.
-
-      const activeClients = clients.filter((c) => c.is_active).length;
 
       const industryDistribution = clients.reduce((acc, client) => {
         if (client.industry) {
@@ -137,7 +150,6 @@ export const fetchClientData = createAsyncThunk(
         return acc;
       }, {});
 
-      // Calculate average client tenure (only for clients on current page)
       const signupDates = clients
         .map((c) => new Date(c.signup_date))
         .filter((date) => !isNaN(date.getTime()));
@@ -155,7 +167,6 @@ export const fetchClientData = createAsyncThunk(
           ? totalTenureDays / signupDates.length / 30.44
           : 0;
 
-      // Calculate monthly client growth (only for clients on current page)
       const monthlyGrowthRaw = clients.reduce((acc, client) => {
         const signupDate = new Date(client.signup_date);
         if (!isNaN(signupDate.getTime())) {
@@ -175,8 +186,7 @@ export const fetchClientData = createAsyncThunk(
 
       return {
         clients,
-        totalClients: totalCount, // This is the total count before pagination
-        activeClients,
+        totalClients: totalCount,
         clientTenure: avgTenureMonths,
         industryDistribution,
         locationDistribution,
@@ -199,9 +209,10 @@ export const fetchClientData = createAsyncThunk(
 const clientSlice = createSlice({
   name: "clients",
   initialState: {
-    clients: [], // Raw client data for the current page
-    totalClients: 0, // Total count of clients matching filters (for pagination)
-    activeClients: 0,
+    clients: [],
+    totalClients: 0,
+    activeClientCount: 0, // NEW: Dedicated state for active clients
+    inactiveClientCount: 0, // NEW: Dedicated state for inactive clients
     clientTenure: 0,
     industryDistribution: {},
     locationDistribution: {},
@@ -216,6 +227,10 @@ const clientSlice = createSlice({
   reducers: {
     setPage: (state, action) => {
       state.currentPage = action.payload;
+    },
+    setItemsPerPage: (state, action) => {
+      state.itemsPerPage = action.payload;
+      state.currentPage = 1;
     },
     setSort: (state, action) => {
       state.sortBy = action.payload.sortBy;
@@ -232,32 +247,51 @@ const clientSlice = createSlice({
         state.loading = false;
         state.clients = action.payload.clients;
         state.totalClients = action.payload.totalClients;
-        state.activeClients = action.payload.activeClients;
         state.clientTenure = action.payload.clientTenure;
         state.industryDistribution = action.payload.industryDistribution;
         state.locationDistribution = action.payload.locationDistribution;
         state.monthlyGrowth = action.payload.monthlyGrowth;
         state.currentPage = action.payload.currentPage;
         state.itemsPerPage = action.payload.itemsPerPage;
-        // sortBy and sortOrder are updated by setSort reducer when filters are applied
       })
       .addCase(fetchClientData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to fetch client data";
         console.error("Failed to fetch client data:", action.payload);
+      })
+      // NEW Cases for fetchActiveInactiveCounts
+      .addCase(fetchActiveInactiveCounts.pending, (state) => {
+        // If you had a separate loading indicator for just these counts
+      })
+      .addCase(fetchActiveInactiveCounts.fulfilled, (state, action) => {
+        state.activeClientCount = action.payload.active;
+        state.inactiveClientCount = action.payload.inactive;
+      })
+      .addCase(fetchActiveInactiveCounts.rejected, (state, action) => {
+        console.error(
+          "Failed to fetch active/inactive counts:",
+          action.payload
+        );
+        // Could set a specific error for counts if needed
       });
   },
 });
 
-export const { setPage, setSort, setItemsPerPage } = clientSlice.actions; // Export new actions
+export const { setPage, setItemsPerPage, setSort } = clientSlice.actions;
 
-export const selectClientData = (state) => state.clients;
-export const selectLoading = (state) => state.clients.loading;
-export const selectError = (state) => state.clients.error;
+export const selectActiveClientCount = (state) =>
+  state.clients.activeClientCount;
+export const selectInactiveClientCount = (state) =>
+  state.clients.inactiveClientCount; // Expose inactive count too
+
 export const selectCurrentPage = (state) => state.clients.currentPage;
 export const selectTotalClients = (state) => state.clients.totalClients;
 export const selectItemsPerPage = (state) => state.clients.itemsPerPage;
 export const selectSortBy = (state) => state.clients.sortBy;
 export const selectSortOrder = (state) => state.clients.sortOrder;
+
+export const selectClientData = (state) => state.clients;
+export const selectLoading = (state) => state.clients.loading;
+export const selectError = (state) => state.clients.error;
 
 export default clientSlice.reducer;
