@@ -65,11 +65,46 @@ const getDateRange = (
 
 export const fetchActiveInactiveCounts = createAsyncThunk(
   "clients/fetchActiveInactiveCounts",
-  async (_, { rejectWithValue }) => {
+  async (filters = {}, { rejectWithValue }) => {
     try {
       await simulateDelay(300);
-      const response = await axios.get(`${API_BASE_URL}/clients/active`);
-      const { activeClients, inactiveClients } = response.data;
+
+      let url = `${API_BASE_URL}/clients?_limit=9999`;
+
+      if (filters.searchTerm) {
+        url += `&name_like=${encodeURIComponent(filters.searchTerm)}`;
+      }
+      if (filters.industry && filters.industry !== "all") {
+        url += `&industry=${encodeURIComponent(filters.industry)}`;
+      }
+      if (filters.subscriptionTier && filters.subscriptionTier !== "all") {
+        url += `&subscription_tier=${encodeURIComponent(
+          filters.subscriptionTier
+        )}`;
+      }
+
+      const { startDate, endDate } = getDateRange(
+        filters.dateRange,
+        filters.customStartDate,
+        filters.customEndDate
+      );
+      if (startDate) {
+        url += `&signup_date_gte=${startDate}`;
+      }
+      if (endDate) {
+        url += `&signup_date_lte=${endDate}`;
+      }
+
+      const response = await axios.get(url);
+      const filteredClients = response.data;
+
+      const activeClients = filteredClients.filter(
+        (client) => client.is_active
+      ).length;
+      const inactiveClients = filteredClients.filter(
+        (client) => !client.is_active
+      ).length;
+
       return { active: activeClients, inactive: inactiveClients };
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -185,8 +220,8 @@ export const fetchClientData = createAsyncThunk(
         industryDistribution,
         locationDistribution,
         monthlyGrowth,
-        currentPage: page, // Pass these back to ensure state consistency
-        itemsPerPage: limit, // Pass these back to ensure state consistency
+        currentPage: page,
+        itemsPerPage: limit,
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -203,7 +238,7 @@ export const fetchClientData = createAsyncThunk(
 const clientSlice = createSlice({
   name: "clients",
   initialState: {
-    clients: [], // Raw client data for the current page
+    clients: [],
     totalClients: 0,
     activeClientCount: 0,
     inactiveClientCount: 0,
@@ -213,12 +248,10 @@ const clientSlice = createSlice({
     monthlyGrowth: [],
     loading: false,
     error: null,
-    // Pagination state (these are directly on the slice root)
     currentPage: 1,
     itemsPerPage: 10,
     sortBy: "id",
     sortOrder: "asc",
-    // NEW: Filter state (these are directly on the slice root)
     searchTerm: "",
     industry: "all",
     subscriptionTier: "all",
@@ -232,16 +265,15 @@ const clientSlice = createSlice({
     },
     setItemsPerPage: (state, action) => {
       state.itemsPerPage = action.payload;
-      state.currentPage = 1; // Reset to page 1 when items per page changes
+      state.currentPage = 1;
     },
     setSort: (state, action) => {
       state.sortBy = action.payload.sortBy;
       state.sortOrder = action.payload.sortOrder;
     },
-    // NEW: Reducers for filter state
     setSearchTerm: (state, action) => {
       state.searchTerm = action.payload;
-      state.currentPage = 1; // Reset page on filter change
+      state.currentPage = 1;
     },
     setIndustryFilter: (state, action) => {
       state.industry = action.payload;
@@ -254,7 +286,6 @@ const clientSlice = createSlice({
     setDateRangeFilter: (state, action) => {
       state.dateRange = action.payload;
       state.currentPage = 1;
-      // Clear custom dates if a non-custom range is selected
       if (action.payload !== "custom") {
         state.customStartDate = null;
         state.customEndDate = null;
@@ -262,12 +293,12 @@ const clientSlice = createSlice({
     },
     setCustomStartDate: (state, action) => {
       state.customStartDate = action.payload;
-      state.dateRange = "custom"; // Ensure range is 'custom' if date is set
+      state.dateRange = "custom";
       state.currentPage = 1;
     },
     setCustomEndDate: (state, action) => {
       state.customEndDate = action.payload;
-      state.dateRange = "custom"; // Ensure range is 'custom' if date is set
+      state.dateRange = "custom";
       state.currentPage = 1;
     },
     clearAllFilters: (state) => {
@@ -277,9 +308,9 @@ const clientSlice = createSlice({
       state.dateRange = "all";
       state.customStartDate = null;
       state.customEndDate = null;
-      state.currentPage = 1; // Reset page
-      state.sortBy = "id"; // Optionally reset sort
-      state.sortOrder = "asc"; // Optionally reset sort
+      state.currentPage = 1;
+      state.sortBy = "id";
+      state.sortOrder = "asc";
     },
   },
   extraReducers: (builder) => {
@@ -296,11 +327,6 @@ const clientSlice = createSlice({
         state.industryDistribution = action.payload.industryDistribution;
         state.locationDistribution = action.payload.locationDistribution;
         state.monthlyGrowth = action.payload.monthlyGrowth;
-        // The currentPage and itemsPerPage are already being updated by `setPage` and `setItemsPerPage` reducers
-        // if they are dispatched *before* fetchClientData.fulfilled updates these from payload,
-        // it's fine. We ensure the values reflect what triggered the fetch.
-        // state.currentPage = action.payload.currentPage; // No need to update from payload here if managed by reducers
-        // state.itemsPerPage = action.payload.itemsPerPage; // No need to update from payload here if managed by reducers
       })
       .addCase(fetchClientData.rejected, (state, action) => {
         state.loading = false;
@@ -308,7 +334,7 @@ const clientSlice = createSlice({
         console.error("Failed to fetch client data:", action.payload);
       })
       .addCase(fetchActiveInactiveCounts.pending, (state) => {
-        // ...
+        // Optionally handle loading state specifically for counts if needed
       })
       .addCase(fetchActiveInactiveCounts.fulfilled, (state, action) => {
         state.activeClientCount = action.payload.active;
@@ -327,7 +353,6 @@ export const {
   setPage,
   setItemsPerPage,
   setSort,
-  // NEW: Export filter actions
   setSearchTerm,
   setIndustryFilter,
   setSubscriptionTierFilter,
@@ -342,11 +367,10 @@ export const selectActiveClientCount = (state) =>
 export const selectInactiveClientCount = (state) =>
   state.clients.inactiveClientCount;
 
-export const selectClientData = (state) => state.clients; // This selects the entire slice state
+export const selectClientData = (state) => state.clients;
 export const selectLoading = (state) => state.clients.loading;
 export const selectError = (state) => state.clients.error;
 
-// New selectors for direct access to pagination and filter states
 export const selectCurrentPage = (state) => state.clients.currentPage;
 export const selectItemsPerPage = (state) => state.clients.itemsPerPage;
 export const selectSortBy = (state) => state.clients.sortBy;
@@ -359,6 +383,6 @@ export const selectSubscriptionTierFilter = (state) =>
 export const selectDateRangeFilter = (state) => state.clients.dateRange;
 export const selectCustomStartDate = (state) => state.clients.customStartDate;
 export const selectCustomEndDate = (state) => state.clients.customEndDate;
-export const selectTotalClients = (state) => state.clients.totalClients; // Assuming this is still used
+export const selectTotalClients = (state) => state.clients.totalClients;
 
 export default clientSlice.reducer;

@@ -169,29 +169,46 @@ const ClientStats = () => {
 
   // Define a memoized function to fetch all dashboard data
   const fetchAllDashboardData = useCallback(() => {
+    // We construct the filters object that needs to be passed to the thunks
+    // It includes the debouncedSearchTerm for the fetch, and other filters from state.
+    const currentFiltersForThunk = {
+      searchTerm: debouncedSearchTerm, // Use the debounced value here
+      industry: filters.industry,
+      subscriptionTier: filters.subscriptionTier,
+      dateRange: filters.dateRange,
+      customStartDate: filters.customStartDate,
+      customEndDate: filters.customEndDate,
+    };
+
     dispatch(
       fetchClientData({
-        ...filters,
-        searchTerm: debouncedSearchTerm,
+        ...currentFiltersForThunk, // Spread the current filters
         page: currentPage,
         limit: itemsPerPage,
         sortBy: sortBy,
         sortOrder: sortOrder,
       })
     );
-    dispatch(fetchActiveInactiveCounts());
+    // IMPORTANT: Pass the constructed filters object to fetchActiveInactiveCounts as well
+    dispatch(fetchActiveInactiveCounts(currentFiltersForThunk));
   }, [
     dispatch,
-    filters.industry,
+    filters.industry, // dependency array should contain all values used from `filters`
     filters.subscriptionTier,
     filters.dateRange,
     filters.customStartDate,
     filters.customEndDate,
-    debouncedSearchTerm,
+    debouncedSearchTerm, // This needs to be a dependency since it changes asynchronously
     currentPage,
     itemsPerPage,
     sortBy,
     sortOrder,
+    // Note: 'filters' as a whole object is not strictly necessary here
+    // if all its properties that are used are individually listed.
+    // However, if the structure of 'filters' might change or to simplify,
+    // you could put 'filters' itself in the dependency array.
+    // For clarity and to avoid potential stale closures, explicitly listing
+    // the properties used from 'filters' for 'currentFiltersForThunk' is safer.
   ]);
 
   // Effect for initial data fetch and handling filter/pagination/sort changes
