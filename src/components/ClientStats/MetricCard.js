@@ -1,4 +1,3 @@
-// src/components/ClientStats/MetricCard.js
 import styled, { keyframes } from "styled-components";
 
 const fadeIn = keyframes`

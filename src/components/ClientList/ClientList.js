@@ -1,5 +1,3 @@
-// src/components/ClientList/ClientList.js
-
 import {
   Box,
   CircularProgress,
@@ -19,13 +17,13 @@ import { useSelector } from "react-redux";
 import styled from "styled-components";
 import {
   selectClientData,
-  selectCurrentPage, // Direct import
-  selectItemsPerPage, // Main client data
-  selectLoading, // Direct import
-  selectSortBy, // Direct import
-  selectSortOrder, // Direct import
-  selectTotalClients, // Direct import
-} from "../../features/clients/clientSlice"; // Ensure correct path
+  selectCurrentPage,
+  selectItemsPerPage,
+  selectLoading,
+  selectSortBy,
+  selectSortOrder,
+  selectTotalClients,
+} from "../../features/clients/clientSlice";
 
 const TableWrapper = styled(Paper)`
   margin-top: 40px;
@@ -36,15 +34,13 @@ const TableWrapper = styled(Paper)`
   overflow: auto; /* Allows both horizontal and vertical scrolling if content overflows */
 `;
 
-// ClientList now receives values directly from Redux, not as props from ClientStats' local state
 const ClientList = ({ setPage, setItemsPerPage, setSort }) => {
-  // Remove page, itemsPerPage, sortBy, sortOrder from props
-  const { clients } = useSelector(selectClientData); // get clients array
-  const totalClients = useSelector(selectTotalClients); // Total count from Redux
-  const currentPage = useSelector(selectCurrentPage); // Current page from Redux
-  const itemsPerPage = useSelector(selectItemsPerPage); // Items per page from Redux
-  const sortBy = useSelector(selectSortBy); // Sort by from Redux
-  const sortOrder = useSelector(selectSortOrder); // Sort order from Redux
+  const { clients } = useSelector(selectClientData);
+  const totalClients = useSelector(selectTotalClients);
+  const currentPage = useSelector(selectCurrentPage);
+  const itemsPerPage = useSelector(selectItemsPerPage);
+  const sortBy = useSelector(selectSortBy);
+  const sortOrder = useSelector(selectSortOrder);
   const loading = useSelector(selectLoading);
 
   const handleRequestSort = (property) => {
@@ -53,7 +49,7 @@ const ClientList = ({ setPage, setItemsPerPage, setSort }) => {
   };
 
   const handleChangePage = (event, newPage) => {
-    setPage(newPage + 1); // MUI page is 0-indexed, our Redux is 1-indexed
+    setPage(newPage + 1);
   };
 
   const handleChangeRowsPerPage = (event) => {

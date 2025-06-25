@@ -1,4 +1,3 @@
-// src/components/ClientStats/ClientChart.js
 import {
   Bar,
   BarChart,
@@ -35,7 +34,6 @@ const ChartTitle = styled.h3`
   font-size: 1.2em;
 `;
 
-// A palette of colors for the charts
 const COLORS = [
   "#0088FE",
   "#00C49F",
@@ -47,7 +45,6 @@ const COLORS = [
 ];
 
 const ClientChart = ({ title, data, type, dataKey, nameKey }) => {
-  // Handle cases where data might be empty
   if (!data || data.length === 0) {
     return (
       <ChartWrapper>
@@ -66,15 +63,14 @@ const ClientChart = ({ title, data, type, dataKey, nameKey }) => {
               data={data}
               cx="50%"
               cy="50%"
-              outerRadius={100} // Increased outerRadius for better visibility
+              outerRadius={100}
               fill="#8884d8"
               dataKey={dataKey}
               nameKey={nameKey}
               label={({ name, percent }) =>
                 `${name} ${(percent * 100).toFixed(0)}%`
-              } // Show percentage label
-              labelLine={false} // Hide lines to labels
-            >
+              }
+              labelLine={false}>
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}

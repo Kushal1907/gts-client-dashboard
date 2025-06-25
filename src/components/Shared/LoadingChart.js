@@ -1,4 +1,3 @@
-// src/components/Shared/LoadingChart.js
 import styled, { keyframes } from "styled-components";
 
 const pulse = keyframes`

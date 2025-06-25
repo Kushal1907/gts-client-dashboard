@@ -1,9 +1,7 @@
-// src/components/ClientStats/ClientStats.js
-// Force rebuild 20250623-3 (updated - full code with transient props for ToggleButton)
 import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import io from "socket.io-client";
-import styled from "styled-components"; // No change here
+import styled from "styled-components";
 
 import {
   fetchActiveInactiveCounts,
@@ -29,9 +27,6 @@ import ClientChart from "./ClientChart";
 import FilterControls from "./FilterControls";
 import MetricCard from "./MetricCard";
 
-// -------------------------------------------------------------------------
-// Styled Components
-// -------------------------------------------------------------------------
 const DashboardContainer = styled.div`
   padding: 20px;
   max-width: 1200px;
@@ -97,7 +92,6 @@ const ChartHeader = styled.div`
   }
 `;
 
-// --- CRITICAL CHANGE 1: Update ToggleButton definition to use $active ---
 const ToggleButton = styled.button`
   background-color: ${(props) => (props.$active ? "#007bff" : "#ccc")};
   color: white;
@@ -112,9 +106,6 @@ const ToggleButton = styled.button`
     background-color: ${(props) => (props.$active ? "#0056b3" : "#999")};
   }
 `;
-// -------------------------------------------------------------------------
-// END Styled Components
-// -------------------------------------------------------------------------
 
 const ClientStats = () => {
   const dispatch = useDispatch();
@@ -156,7 +147,6 @@ const ClientStats = () => {
     filters.searchTerm
   );
 
-  // Effect for debouncing search term
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(filters.searchTerm);
@@ -167,12 +157,9 @@ const ClientStats = () => {
     };
   }, [filters.searchTerm]);
 
-  // Define a memoized function to fetch all dashboard data
   const fetchAllDashboardData = useCallback(() => {
-    // We construct the filters object that needs to be passed to the thunks
-    // It includes the debouncedSearchTerm for the fetch, and other filters from state.
     const currentFiltersForThunk = {
-      searchTerm: debouncedSearchTerm, // Use the debounced value here
+      searchTerm: debouncedSearchTerm,
       industry: filters.industry,
       subscriptionTier: filters.subscriptionTier,
       dateRange: filters.dateRange,
@@ -182,41 +169,33 @@ const ClientStats = () => {
 
     dispatch(
       fetchClientData({
-        ...currentFiltersForThunk, // Spread the current filters
+        ...currentFiltersForThunk,
         page: currentPage,
         limit: itemsPerPage,
         sortBy: sortBy,
         sortOrder: sortOrder,
       })
     );
-    // IMPORTANT: Pass the constructed filters object to fetchActiveInactiveCounts as well
+
     dispatch(fetchActiveInactiveCounts(currentFiltersForThunk));
   }, [
     dispatch,
-    filters.industry, // dependency array should contain all values used from `filters`
+    filters.industry,
     filters.subscriptionTier,
     filters.dateRange,
     filters.customStartDate,
     filters.customEndDate,
-    debouncedSearchTerm, // This needs to be a dependency since it changes asynchronously
+    debouncedSearchTerm,
     currentPage,
     itemsPerPage,
     sortBy,
     sortOrder,
-    // Note: 'filters' as a whole object is not strictly necessary here
-    // if all its properties that are used are individually listed.
-    // However, if the structure of 'filters' might change or to simplify,
-    // you could put 'filters' itself in the dependency array.
-    // For clarity and to avoid potential stale closures, explicitly listing
-    // the properties used from 'filters' for 'currentFiltersForThunk' is safer.
   ]);
 
-  // Effect for initial data fetch and handling filter/pagination/sort changes
   useEffect(() => {
     fetchAllDashboardData();
   }, [fetchAllDashboardData]);
 
-  // WebSocket connection and event listener for real-time updates
   useEffect(() => {
     const socket = io("http://localhost:3001");
 
@@ -351,7 +330,7 @@ const ClientStats = () => {
         <div>
           <ChartHeader>
             <h3>Clients by Industry</h3>
-            {/* --- CRITICAL CHANGE 2: Update ToggleButton usage to use $active --- */}
+            {/* ---  ToggleButton usage to use $active --- */}
             <ToggleButton
               $active={chartVisibility.industry}
               onClick={() => toggleChartVisibility("industry")}
@@ -381,7 +360,7 @@ const ClientStats = () => {
         <div>
           <ChartHeader>
             <h3>Clients by Location</h3>
-            {/* --- CRITICAL CHANGE 3: Update ToggleButton usage to use $active --- */}
+            {/* --- Update ToggleButton usage to use $active --- */}
             <ToggleButton
               $active={chartVisibility.location}
               onClick={() => toggleChartVisibility("location")}
@@ -411,7 +390,7 @@ const ClientStats = () => {
         <div>
           <ChartHeader>
             <h3>Monthly Client Growth</h3>
-            {/* --- CRITICAL CHANGE 4: Update ToggleButton usage to use $active --- */}
+            {/* ---  Update ToggleButton usage to use $active --- */}
             <ToggleButton
               $active={chartVisibility.monthlyGrowth}
               onClick={() => toggleChartVisibility("monthlyGrowth")}

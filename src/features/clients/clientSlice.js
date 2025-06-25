@@ -1,4 +1,3 @@
-// src/features/clients/clientSlice.js
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import axiosRetry from "axios-retry";
@@ -333,9 +332,7 @@ const clientSlice = createSlice({
         state.error = action.payload || "Failed to fetch client data";
         console.error("Failed to fetch client data:", action.payload);
       })
-      .addCase(fetchActiveInactiveCounts.pending, (state) => {
-        // Optionally handle loading state specifically for counts if needed
-      })
+      .addCase(fetchActiveInactiveCounts.pending, (state) => {})
       .addCase(fetchActiveInactiveCounts.fulfilled, (state, action) => {
         state.activeClientCount = action.payload.active;
         state.inactiveClientCount = action.payload.inactive;

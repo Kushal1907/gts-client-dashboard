@@ -3,6 +3,6 @@ import clientReducer from "../features/clients/clientSlice";
 
 export const store = configureStore({
   reducer: {
-    clients: clientReducer, // Our client slice
+    clients: clientReducer,
   },
 });

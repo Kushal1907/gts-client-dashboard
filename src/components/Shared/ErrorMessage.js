@@ -1,4 +1,3 @@
-// src/components/Shared/ErrorMessage.js
 import styled from "styled-components";
 
 const ErrorContainer = styled.div`
