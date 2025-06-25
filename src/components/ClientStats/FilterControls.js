@@ -1,43 +1,43 @@
 // src/components/ClientStats/FilterControls.js
-
-import {
-  Box,
-  Button,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-} from "@mui/material";
-import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { Box, Button, Grid, MenuItem, TextField } from "@mui/material"; // Import Material-UI components
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; // Import Adapter for date-fns
+import { DatePicker } from "@mui/x-date-pickers/DatePicker"; // Import DatePicker
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"; // Import LocalizationProvider
 import styled from "styled-components";
 
-const FilterContainer = styled(Box)`
-  background-color: #ffffff;
+const FiltersContainer = styled(Box)`
+  // Style the MUI Box with styled-components
+  margin-bottom: 30px;
   padding: 20px;
+  background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  margin-bottom: 30px;
+
+  @media (max-width: 768px) {
+    padding: 15px;
+  }
 `;
 
 const FilterControls = ({ filters, onFilterChange }) => {
-  const {
-    searchTerm,
-    industry,
-    subscriptionTier,
-    dateRange,
-    customStartDate,
-    customEndDate,
-  } = filters;
-
-  const handleInputChange = (e) => {
-    onFilterChange({ [e.target.name]: e.target.value });
+  const handleIndustryChange = (event) => {
+    onFilterChange({ industry: event.target.value });
   };
 
-  const handleDateChange = (dateType) => (date) => {
-    onFilterChange({ [dateType]: date });
+  const handleSubscriptionTierChange = (event) => {
+    onFilterChange({ subscriptionTier: event.target.value });
+  };
+
+  const handleDateRangeChange = (event) => {
+    const range = event.target.value;
+    onFilterChange({
+      dateRange: range,
+      customStartDate: null, // Reset custom dates when predefined range selected
+      customEndDate: null, // Reset custom dates when predefined range selected
+    });
+  };
+
+  const handleSearchChange = (e) => {
+    onFilterChange({ searchTerm: e.target.value });
   };
 
   const handleClearFilters = () => {
@@ -48,146 +48,131 @@ const FilterControls = ({ filters, onFilterChange }) => {
       dateRange: "all",
       customStartDate: null,
       customEndDate: null,
-      page: 1,
+    });
+  };
+
+  // Handle custom date changes
+  const handleCustomStartDateChange = (date) => {
+    onFilterChange({
+      customStartDate: date,
+      dateRange: "custom", // Set dateRange to 'custom' when custom date is picked
+    });
+  };
+
+  const handleCustomEndDateChange = (date) => {
+    onFilterChange({
+      customEndDate: date,
+      dateRange: "custom", // Set dateRange to 'custom' when custom date is picked
     });
   };
 
   return (
-    <FilterContainer>
-      {/*
-        CRITICAL CHANGE FOR MUI GRID V2:
-        1. Add `columns` prop to the Grid container (e.g., columns={12} for a 12-column grid system).
-        2. Replace `xs`, `sm`, `md` props on individual Grid items with `sx={{ gridColumn: { breakpoint: 'span X' } }}`.
-           'span X' means the item will span X columns within the container's defined columns.
-      */}
-      <Grid container spacing={2} alignItems="flex-end" columns={12}>
-        {" "}
-        {/* Define the total columns for the grid system */}
-        {/* Search Term */}
-        <Grid
-          sx={{ gridColumn: { xs: "span 12", sm: "span 6", md: "span 3" } }}>
-          <TextField
-            label="Search Clients"
-            variant="outlined"
-            fullWidth
-            name="searchTerm"
-            value={searchTerm}
-            onChange={handleInputChange}
-          />
-        </Grid>
-        {/* Industry Filter */}
-        <Grid
-          sx={{ gridColumn: { xs: "span 12", sm: "span 6", md: "span 3" } }}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Industry</InputLabel>
-            <Select
-              label="Industry"
-              name="industry"
-              value={industry}
-              onChange={handleInputChange}>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      {" "}
+      {/* Wrap with LocalizationProvider */}
+      <FiltersContainer>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Search Client Name"
+              variant="outlined"
+              value={filters.searchTerm}
+              onChange={handleSearchChange}
+              size="small" // Make it smaller to fit
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <TextField
+              fullWidth
+              select
+              label="Filter by Industry"
+              value={filters.industry}
+              onChange={handleIndustryChange}
+              variant="outlined"
+              size="small">
               <MenuItem value="all">All Industries</MenuItem>
-              <MenuItem value="Technology">Technology</MenuItem>
+              <MenuItem value="IT">IT</MenuItem>
               <MenuItem value="Finance">Finance</MenuItem>
               <MenuItem value="Healthcare">Healthcare</MenuItem>
-              <MenuItem value="Retail">Retail</MenuItem>
-              <MenuItem value="Manufacturing">Manufacturing</MenuItem>
               <MenuItem value="Education">Education</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        {/* Subscription Tier Filter */}
-        <Grid
-          sx={{ gridColumn: { xs: "span 12", sm: "span 6", md: "span 3" } }}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Subscription Tier</InputLabel>
-            <Select
+              <MenuItem value="Manufacturing">Manufacturing</MenuItem>
+              {/* Add more industries as per your db.json */}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <TextField
+              fullWidth
+              select
               label="Subscription Tier"
-              name="subscriptionTier"
-              value={subscriptionTier}
-              onChange={handleInputChange}>
+              value={filters.subscriptionTier}
+              onChange={handleSubscriptionTierChange}
+              variant="outlined"
+              size="small">
               <MenuItem value="all">All Tiers</MenuItem>
               <MenuItem value="Basic">Basic</MenuItem>
-              <MenuItem value="Standard">Standard</MenuItem>
               <MenuItem value="Premium">Premium</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        {/* Date Range Filter */}
-        <Grid
-          sx={{ gridColumn: { xs: "span 12", sm: "span 6", md: "span 3" } }}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel>Signup Date Range</InputLabel>
-            <Select
+              <MenuItem value="Enterprise">Enterprise</MenuItem>
+              <MenuItem value="Free">Free</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <TextField
+              fullWidth
+              select
               label="Signup Date Range"
-              name="dateRange"
-              value={dateRange}
-              onChange={handleInputChange}>
+              value={filters.dateRange}
+              onChange={handleDateRangeChange}
+              variant="outlined"
+              size="small">
               <MenuItem value="all">All Time</MenuItem>
-              <MenuItem value="lastMonth">Last Month</MenuItem>
-              <MenuItem value="last3Months">Last 3 Months</MenuItem>
-              <MenuItem value="last6Months">Last 6 Months</MenuItem>
-              <MenuItem value="lastYear">Last Year</MenuItem>
-              <MenuItem value="custom">Custom Range</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        {/* Custom Date Range Pickers (conditionally rendered) */}
-        {dateRange === "custom" && (
-          <>
-            <Grid
-              sx={{
-                gridColumn: { xs: "span 12", sm: "span 6", md: "span 3" },
-              }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <MenuItem value="last_3_months">Last 3 Months</MenuItem>
+              <MenuItem value="last_6_months">Last 6 Months</MenuItem>
+              <MenuItem value="this_year">This Year</MenuItem>
+              <MenuItem value="last_year">Last Year</MenuItem>
+              <MenuItem value="custom">Custom Range</MenuItem>{" "}
+              {/* New option */}
+            </TextField>
+          </Grid>
+
+          {/* Custom Date Pickers - visible only when 'Custom Range' is selected */}
+          {filters.dateRange === "custom" && (
+            <>
+              <Grid item xs={12} sm={6} md={2}>
                 <DatePicker
                   label="Start Date"
-                  value={customStartDate}
-                  onChange={handleDateChange("customStartDate")}
-                  renderInput={(params) => (
-                    <TextField {...params} fullWidth variant="outlined" />
-                  )}
+                  value={filters.customStartDate}
+                  onChange={handleCustomStartDateChange}
+                  slotProps={{ textField: { size: "small", fullWidth: true } }} // Adjust size for DatePicker's TextField
                 />
-              </LocalizationProvider>
-            </Grid>
-            <Grid
-              sx={{
-                gridColumn: { xs: "span 12", sm: "span 6", md: "span 3" },
-              }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
+              </Grid>
+              <Grid item xs={12} sm={6} md={2}>
                 <DatePicker
                   label="End Date"
-                  value={customEndDate}
-                  onChange={handleDateChange("customEndDate")}
-                  renderInput={(params) => (
-                    <TextField {...params} fullWidth variant="outlined" />
-                  )}
+                  value={filters.customEndDate}
+                  onChange={handleCustomEndDateChange}
+                  slotProps={{ textField: { size: "small", fullWidth: true } }} // Adjust size for DatePicker's TextField
                 />
-              </LocalizationProvider>
-            </Grid>
-          </>
-        )}
-        {/* Clear Filters Button */}
-        {/* Adjusted gridColumn for custom date range visibility */}
-        <Grid
-          sx={{
-            gridColumn: {
-              xs: "span 12",
-              sm: "span 6",
-              md: dateRange === "custom" ? "span 6" : "span 3",
-            },
-          }}>
-          <Button
-            variant="outlined"
-            color="secondary"
-            fullWidth
-            onClick={handleClearFilters}
-            sx={{ height: "56px" }} // Match TextField height
-          >
-            Clear Filters
-          </Button>
+              </Grid>
+            </>
+          )}
+
+          <Grid item xs={12} sm={6} md={filters.dateRange === "custom" ? 1 : 3}>
+            {" "}
+            {/* Adjust grid size dynamically */}
+            <Button
+              fullWidth
+              variant="outlined"
+              color="secondary"
+              onClick={handleClearFilters}
+              sx={{ height: "40px" }} // Match TextField height for size="small"
+            >
+              Clear Filters
+            </Button>
+          </Grid>
         </Grid>
-      </Grid>
-    </FilterContainer>
+      </FiltersContainer>
+    </LocalizationProvider>
   );
 };
 

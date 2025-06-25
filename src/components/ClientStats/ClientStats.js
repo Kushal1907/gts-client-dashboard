@@ -45,6 +45,8 @@ const DashboardContainer = styled.div`
 
   @media (max-width: 768px) {
     padding: 15px;
+    margin: 0;
+    max-width: 100%;
   }
 `;
 
@@ -244,7 +246,7 @@ const ClientStats = () => {
         dispatch(setPage(1));
       }
       if (newFilters.limit !== undefined) {
-        dispatch(setItemsPerPage(newFilters.imit));
+        dispatch(setItemsPerPage(newFilters.limit));
       }
     },
     [filters, dispatch]

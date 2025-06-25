@@ -1,4 +1,5 @@
 // src/components/ClientList/ClientList.js
+
 import {
   Box,
   CircularProgress,
@@ -13,33 +14,38 @@ import {
   TableSortLabel,
   Typography,
 } from "@mui/material";
-import { visuallyHidden } from "@mui/utils"; // For accessible sorting labels
+import { visuallyHidden } from "@mui/utils";
 import { useSelector } from "react-redux";
-import styled from "styled-components"; // For styled components integration
+import styled from "styled-components";
 import {
   selectClientData,
-  selectLoading,
-} from "../../features/clients/clientSlice";
+  selectCurrentPage, // Direct import
+  selectItemsPerPage, // Main client data
+  selectLoading, // Direct import
+  selectSortBy, // Direct import
+  selectSortOrder, // Direct import
+  selectTotalClients, // Direct import
+} from "../../features/clients/clientSlice"; // Ensure correct path
 
 const TableWrapper = styled(Paper)`
   margin-top: 40px;
   padding: 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   border-radius: 8px;
-  overflow: hidden; /* Ensure rounded corners are applied */
+  // FIX: Change overflow: hidden to overflow: auto or overflow-x: auto
+  overflow: auto; /* Allows both horizontal and vertical scrolling if content overflows */
 `;
 
-const ClientList = ({
-  page,
-  setPage,
-  itemsPerPage,
-  setItemsPerPage,
-  sortBy,
-  sortOrder,
-  setSort,
-}) => {
-  const { clients, totalClients } = useSelector(selectClientData);
-  const loading = useSelector(selectLoading); // Global loading for the entire dashboard
+// ClientList now receives values directly from Redux, not as props from ClientStats' local state
+const ClientList = ({ setPage, setItemsPerPage, setSort }) => {
+  // Remove page, itemsPerPage, sortBy, sortOrder from props
+  const { clients } = useSelector(selectClientData); // get clients array
+  const totalClients = useSelector(selectTotalClients); // Total count from Redux
+  const currentPage = useSelector(selectCurrentPage); // Current page from Redux
+  const itemsPerPage = useSelector(selectItemsPerPage); // Items per page from Redux
+  const sortBy = useSelector(selectSortBy); // Sort by from Redux
+  const sortOrder = useSelector(selectSortOrder); // Sort order from Redux
+  const loading = useSelector(selectLoading);
 
   const handleRequestSort = (property) => {
     const isAsc = sortBy === property && sortOrder === "asc";
@@ -52,7 +58,6 @@ const ClientList = ({
 
   const handleChangeRowsPerPage = (event) => {
     setItemsPerPage(parseInt(event.target.value, 10));
-    // setPage(1) is handled within setItemsPerPage action now
   };
 
   return (
@@ -60,7 +65,7 @@ const ClientList = ({
       <Typography variant="h5" gutterBottom sx={{ marginBottom: 2 }}>
         Client Details List
       </Typography>
-      {loading && clients.length === 0 ? ( // Only show loading spinner if no data has been loaded yet
+      {loading && clients.length === 0 ? (
         <Box
           sx={{
             display: "flex",
@@ -188,7 +193,7 @@ const ClientList = ({
             component="div"
             count={totalClients}
             rowsPerPage={itemsPerPage}
-            page={page - 1} // MUI page is 0-indexed, our Redux is 1-indexed
+            page={currentPage - 1}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
